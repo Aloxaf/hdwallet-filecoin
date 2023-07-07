@@ -12,4 +12,6 @@ pub enum Error {
     Blst(u32),
     #[error("secp256k1 error: {0}")]
     Secp256k1(#[from] secp256k1::Error),
+    #[error("cannot derive secp256k1 imported by private key")]
+    CannotDerive,
 }

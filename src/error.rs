@@ -10,4 +10,6 @@ pub enum Error {
     HdWallet(#[from] hdwallet::error::Error),
     #[error("blst erro: {0}")]
     Blst(u32),
+    #[error("secp256k1 error: {0}")]
+    Secp256k1(#[from] secp256k1::Error),
 }

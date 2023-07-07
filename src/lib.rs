@@ -1,38 +1,45 @@
 mod error;
+mod utils;
 
-use crate::error::{Result, Error};
-use bip39::{Language, Mnemonic, Seed};
-use hdwallet::traits::Serialize;
+use blst::min_sig::SecretKey as BlsPrivate;
+use hdwallet::ExtendedPrivKey as SecpExtendedPrivate;
+use secp256k1::SecretKey as SecpPrivate;
 
-#[derive(Debug, Copy, Clone)]
-pub enum SignatureType {
-    ExtendedSecp256k1,
-    Bls,
-}
+use crate::error::{Error, Result};
+use crate::utils::mnemonic_to_seed;
 
-pub struct SecretKey {
-    pub sig_type: SignatureType,
-    pub private_key: Vec<u8>,
+
+// TODO: zeroize it
+pub enum SecretKey {
+    Secp256k1(SecpPrivate),
+    Secp256k1Extended(SecpExtendedPrivate),
+    Bls(BlsPrivate),
 }
 
 impl SecretKey {
-    pub fn from_mnemonic(phrase: &str, sig_type: SignatureType) -> Result<Self> {
-        let mnemonic = Mnemonic::from_phrase(phrase, Language::English).map_err(Error::BadMnemonic)?;
-        let seed = Seed::new(&mnemonic, "");
-        let bytes = match sig_type {
-            SignatureType::ExtendedSecp256k1 => {
-                let sk = hdwallet::ExtendedPrivKey::with_seed(seed.as_bytes())?;
-                sk.serialize()
-            },
-            SignatureType::Bls => {
-                // TODO: 测试一下 min_sig 和 min_pk 是不是效果一样
-                let sk = blst::min_sig::SecretKey::derive_master_eip2333(seed.as_bytes()).map_err(|e| Error::Blst(e as u32))?;
-                sk.serialize().to_vec()
-            },
-        };
-        Ok(Self {
-            sig_type,
-            private_key: bytes,
-        })
+    pub fn from_mnemonic_secp(phrase: &str) -> Result<Self> {
+        let seed = mnemonic_to_seed(phrase)?;
+        let sk = SecpExtendedPrivate::with_seed(seed.as_bytes())?;
+        Ok(Self::Secp256k1Extended(sk))
+    }
+
+    pub fn from_mnemonic_bls(phrase: &str) -> Result<Self> {
+        let seed = mnemonic_to_seed(phrase)?;
+        // TODO: 测试一下 min_sig 和 min_pk 是不是效果一样
+        let sk = BlsPrivate::derive_master_eip2333(seed.as_bytes())
+            .map_err(|e| Error::Blst(e as u32))?;
+        Ok(Self::Bls(sk))
+    }
+
+    pub fn from_slice_secp(data: &[u8]) -> Result<Self> {
+        let sk = SecpPrivate::from_slice(data)?;
+        Ok(Self::Secp256k1(sk))
+    }
+
+    pub fn from_slice_bls(data: &[u8]) -> Result<Self> {
+        let sk = BlsPrivate::from_bytes(data).map_err(|e| Error::Blst(e as u32))?;
+        Ok(Self::Bls(sk))
     }
 }
+
+

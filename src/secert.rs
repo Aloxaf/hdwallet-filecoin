@@ -41,7 +41,7 @@ impl SecretKey {
     pub fn derive_key(&self, index: u32) -> Result<Self> {
         match self {
             Self::Secp256k1Extended(sk) => {
-                let sk = sk.derive_private_key(KeyIndex::Hardened(index))?;
+                let sk = sk.derive_private_key(KeyIndex::Hardened(2u32.pow(31) + index))?;
                 Ok(Self::Secp256k1Extended(sk))
             }
             Self::Bls(sk) => {
@@ -101,6 +101,8 @@ mod tests {
     use super::SecretKey;
     use crate::utils::mnemonic_to_seed;
     use data_encoding_macro::{hexlower, hexupper};
+    use hdwallet::traits::Deserialize;
+    use hdwallet_bitcoin::PrivKey as BtcPrivKey;
     use ibig::ubig;
 
     // https://eips.ethereum.org/EIPS/eip-2333#test-case-0
@@ -177,5 +179,53 @@ mod tests {
             ubig!(_31372231650479070279774297061823572166496564838472787488249775572789064611981)
                 .to_be_bytes()
         );
+    }
+
+    #[test]
+    fn bip_32_test_vector_1() {
+        let seed = hexlower!("000102030405060708090a0b0c0d0e0f");
+        let sk = SecretKey::from_seed_secp(&seed).unwrap();
+        assert_eq!(
+            sk.to_raw_bytes(),
+            BtcPrivKey::deserialize("xprv9s21ZrQH143K3QTDL4LXw2F7HEK3wJUD2nW2nRk4stbPy6cq3jPPqjiChkVvvNKmPGJxWUtg6LnF5kejMRNNU3TGtRBeJgk33yuGBxrMPHi".to_string())
+                .unwrap()
+                .extended_key
+                .private_key
+                .secret_bytes()
+        );
+
+        let sk = sk.derive_key(0).unwrap();
+        assert_eq!(
+            sk.to_raw_bytes(),
+            BtcPrivKey::deserialize("xprv9uHRZZhk6KAJC1avXpDAp4MDc3sQKNxDiPvvkX8Br5ngLNv1TxvUxt4cV1rGL5hj6KCesnDYUhd7oWgT11eZG7XnxHrnYeSvkzY7d2bhkJ7".to_string())
+                .unwrap()
+                .extended_key
+                .private_key
+                .secret_bytes()
+        )
+    }
+
+    #[test]
+    fn bip_32_test_vector_3() {
+        let seed = hexlower!("4b381541583be4423346c643850da4b320e46a87ae3d2a4e6da11eba819cd4acba45d239319ac14f863b8d5ab5a0d0c64d2e8a1e7d1457df2e5a3c51c73235be");
+        let sk = SecretKey::from_seed_secp(&seed).unwrap();
+        assert_eq!(
+            sk.to_raw_bytes(),
+            BtcPrivKey::deserialize("xprv9s21ZrQH143K25QhxbucbDDuQ4naNntJRi4KUfWT7xo4EKsHt2QJDu7KXp1A3u7Bi1j8ph3EGsZ9Xvz9dGuVrtHHs7pXeTzjuxBrCmmhgC6".to_string())
+                .unwrap()
+                .extended_key
+                .private_key
+                .secret_bytes()
+        );
+
+        let sk = sk.derive_key(0).unwrap();
+        assert_eq!(
+            sk.to_raw_bytes(),
+            BtcPrivKey::deserialize("xprv9uPDJpEQgRQfDcW7BkF7eTya6RPxXeJCqCJGHuCJ4GiRVLzkTXBAJMu2qaMWPrS7AANYqdq6vcBcBUdJCVVFceUvJFjaPdGZ2y9WACViL4L".to_string())
+                .unwrap()
+                .extended_key
+                .private_key
+                .secret_bytes()
+        )
     }
 }

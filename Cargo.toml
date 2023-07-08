@@ -22,5 +22,5 @@ tiny-bip39 = { version = "1.0.0", default-features = false }
 #zeroize = { version = "1.6.0", features = ["std", "aarch64", "zeroize_derive"] }
 
 [dev-dependencies]
-bs58 = "0.5.0"
+hdwallet-bitcoin = "0.4.1"
 ibig = { version = "0.3.6", default-features = false }

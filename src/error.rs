@@ -14,4 +14,6 @@ pub enum Error {
     Secp256k1(#[from] secp256k1::Error),
     #[error("cannot derive secp256k1 imported by private key")]
     CannotDerive,
+    #[error("bad signature")]
+    BadSignature,
 }

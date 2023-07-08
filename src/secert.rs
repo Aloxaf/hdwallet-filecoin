@@ -71,10 +71,9 @@ impl SecretKey {
                 private_key: sk, ..
             })
             | Self::Secp256k1(sk) => {
-                let secp = secp256k1::Secp256k1::new();
                 let hash = blake2b_256(msg);
                 let msg = secp256k1::Message::from_slice(&hash)?;
-                let sig = secp.sign_ecdsa(&msg, sk);
+                let sig = sk.sign_ecdsa(msg);
                 Ok(Signature::Secp256k1(sig))
             }
             Self::Bls(sk) => {

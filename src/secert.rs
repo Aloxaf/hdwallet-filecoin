@@ -5,7 +5,8 @@ use secp256k1::SecretKey as SecpPrivate;
 
 use crate::error::{Error, Result};
 use crate::public::PublicKey;
-use crate::utils::mnemonic_to_seed;
+use crate::signature::Signature;
+use crate::utils::{blake2b_256, mnemonic_to_seed};
 
 // TODO: zeroize it
 pub enum SecretKey {
@@ -57,15 +58,34 @@ impl SecretKey {
 
     pub fn public_key(&self) -> Result<PublicKey> {
         match self {
-            Self::Secp256k1Extended(sk) => {
-                let secp = secp256k1::Secp256k1::new();
-                Ok(PublicKey::Secp256k1(sk.private_key.public_key(&secp)))
-            }
-            Self::Secp256k1(sk) => {
+            Self::Secp256k1Extended(SecpExtendedPrivate {
+                private_key: sk, ..
+            })
+            | Self::Secp256k1(sk) => {
                 let secp = secp256k1::Secp256k1::new();
                 Ok(PublicKey::Secp256k1(sk.public_key(&secp)))
             }
             Self::Bls(sk) => Ok(PublicKey::Bls(sk.sk_to_pk())),
+        }
+    }
+
+    pub fn sign(&self, msg: &[u8]) -> Result<Signature> {
+        match self {
+            Self::Secp256k1Extended(SecpExtendedPrivate {
+                private_key: sk, ..
+            })
+            | Self::Secp256k1(sk) => {
+                let secp = secp256k1::Secp256k1::new();
+                let hash = blake2b_256(msg);
+                let msg = secp256k1::Message::from_slice(&hash)?;
+                let sig = secp.sign_ecdsa(&msg, sk);
+                Ok(Signature::Secp256k1(sig))
+            }
+            Self::Bls(sk) => {
+                let dst = b"BLS_SIG_BLS12381G2_XMD:SHA-256_SSWU_RO_NUL_";
+                let sig = sk.sign(msg, dst, &[]);
+                Ok(Signature::Bls(sig))
+            }
         }
     }
 }

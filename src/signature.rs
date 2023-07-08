@@ -36,4 +36,19 @@ impl Signature {
         }
         Ok(())
     }
+
+    pub fn to_bytes(&self) -> Vec<u8> {
+        match self {
+            Self::Secp256k1(sig) => {
+                let mut v = vec![1];
+                v.extend_from_slice(sig.serialize_compact());
+                v
+            }
+            Self::Bls(sig) => {
+                let mut v = vec![2];
+                v.extend_from_slice(sig.compress());
+                v
+            }
+        }
+    }
 }

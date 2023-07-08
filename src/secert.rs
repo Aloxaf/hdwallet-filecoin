@@ -4,9 +4,10 @@ use hdwallet::KeyIndex;
 use secp256k1::SecretKey as SecpPrivate;
 
 use crate::error::{Error, Result};
+use crate::json::{SecertKeyJson, SigType};
 use crate::public::PublicKey;
 use crate::signature::Signature;
-use crate::utils::blake2b_256;
+use crate::utils::{blake2b_256, bls_deserialize, bls_serialize};
 
 // TODO: zeroize it
 pub enum SecretKey {
@@ -32,8 +33,38 @@ impl SecretKey {
     }
 
     pub fn from_slice_bls(data: &[u8]) -> Result<Self> {
-        let sk = BlsPrivate::from_bytes(data).map_err(|e| Error::Blst(e as u32))?;
+        let sk = BlsPrivate::deserialize(data).map_err(|e| Error::Blst(e as u32))?;
         Ok(Self::Bls(sk))
+    }
+
+    pub fn from_lotus_hex(data: &str) -> Result<Self> {
+        let bytes = hex::decode(data)?;
+        let skj = serde_json::from_slice::<SecertKeyJson>(&bytes)?;
+        match skj.sig_type {
+            SigType::Bls => {
+                let sk = bls_deserialize(&skj.private_key).map_err(|e| Error::Blst(e as u32))?;
+                Ok(Self::Bls(sk))
+            }
+            SigType::Secp256k1 => Self::from_slice_secp(&skj.private_key),
+        }
+    }
+
+    pub fn to_lotus_hex(&self) -> Result<String> {
+        let skj = match self {
+            Self::Secp256k1(_) | Self::Secp256k1Extended(_) => SecertKeyJson {
+                sig_type: SigType::Secp256k1,
+                private_key: self.to_raw_bytes(),
+            },
+            Self::Bls(sk) => SecertKeyJson {
+                sig_type: SigType::Bls,
+                private_key: bls_serialize(sk)
+                    .map_err(|e| Error::Blst(e as u32))?
+                    .to_vec(),
+            },
+        };
+        let json = serde_json::to_string(&skj)?;
+        let hex = hex::encode(&json);
+        Ok(hex)
     }
 }
 
@@ -52,16 +83,16 @@ impl SecretKey {
         }
     }
 
-    pub fn public_key(&self) -> Result<PublicKey> {
+    pub fn public_key(&self) -> PublicKey {
         match self {
             Self::Secp256k1Extended(SecpExtendedPrivate {
                 private_key: sk, ..
             })
             | Self::Secp256k1(sk) => {
                 let secp = secp256k1::Secp256k1::new();
-                Ok(PublicKey::Secp256k1(sk.public_key(&secp)))
+                PublicKey::Secp256k1(sk.public_key(&secp))
             }
-            Self::Bls(sk) => Ok(PublicKey::Bls(sk.sk_to_pk())),
+            Self::Bls(sk) => PublicKey::Bls(sk.sk_to_pk()),
         }
     }
 
@@ -109,9 +140,9 @@ mod tests {
     fn eip_2333_case0() {
         let phrase = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about";
         let seed = mnemonic_to_seed(phrase, Some("TREZOR")).unwrap();
-        assert_eq!(seed.as_bytes(), hexlower!("c55257c360c07c72029aebc1b53c05ed0362ada38ead3e3e9efa3708e53495531f09a6987599d18264c1e1c92f2cf141630c7a3c4ab7c81b2f001698e7463b04"));
+        assert_eq!(seed, hexlower!("c55257c360c07c72029aebc1b53c05ed0362ada38ead3e3e9efa3708e53495531f09a6987599d18264c1e1c92f2cf141630c7a3c4ab7c81b2f001698e7463b04"));
 
-        let sk = SecretKey::from_seed_bls(seed.as_bytes()).unwrap();
+        let sk = SecretKey::from_seed_bls(&seed).unwrap();
         assert_eq!(
             sk.to_raw_bytes(),
             ubig!(_6083874454709270928345386274498605044986640685124978867557563392430687146096)
@@ -180,51 +211,57 @@ mod tests {
         );
     }
 
+    fn bitcoin_sk_eq(a: &SecretKey, b: &BtcPrivKey) {
+        assert_eq!(a.to_raw_bytes(), b.extended_key.private_key.secret_bytes());
+    }
+
     #[test]
     fn bip_32_test_vector_1() {
         let seed = hexlower!("000102030405060708090a0b0c0d0e0f");
         let sk = SecretKey::from_seed_secp(&seed).unwrap();
-        assert_eq!(
-            sk.to_raw_bytes(),
-            BtcPrivKey::deserialize("xprv9s21ZrQH143K3QTDL4LXw2F7HEK3wJUD2nW2nRk4stbPy6cq3jPPqjiChkVvvNKmPGJxWUtg6LnF5kejMRNNU3TGtRBeJgk33yuGBxrMPHi".to_string())
-                .unwrap()
-                .extended_key
-                .private_key
-                .secret_bytes()
+        bitcoin_sk_eq(
+            &sk,
+            &BtcPrivKey::deserialize("xprv9s21ZrQH143K3QTDL4LXw2F7HEK3wJUD2nW2nRk4stbPy6cq3jPPqjiChkVvvNKmPGJxWUtg6LnF5kejMRNNU3TGtRBeJgk33yuGBxrMPHi".to_string()).unwrap(),
         );
 
         let sk = sk.derive_key(0).unwrap();
-        assert_eq!(
-            sk.to_raw_bytes(),
-            BtcPrivKey::deserialize("xprv9uHRZZhk6KAJC1avXpDAp4MDc3sQKNxDiPvvkX8Br5ngLNv1TxvUxt4cV1rGL5hj6KCesnDYUhd7oWgT11eZG7XnxHrnYeSvkzY7d2bhkJ7".to_string())
-                .unwrap()
-                .extended_key
-                .private_key
-                .secret_bytes()
-        )
+        bitcoin_sk_eq(
+            &sk,
+            &BtcPrivKey::deserialize("xprv9uHRZZhk6KAJC1avXpDAp4MDc3sQKNxDiPvvkX8Br5ngLNv1TxvUxt4cV1rGL5hj6KCesnDYUhd7oWgT11eZG7XnxHrnYeSvkzY7d2bhkJ7".to_string()).unwrap(),
+        );
     }
 
     #[test]
     fn bip_32_test_vector_3() {
         let seed = hexlower!("4b381541583be4423346c643850da4b320e46a87ae3d2a4e6da11eba819cd4acba45d239319ac14f863b8d5ab5a0d0c64d2e8a1e7d1457df2e5a3c51c73235be");
         let sk = SecretKey::from_seed_secp(&seed).unwrap();
-        assert_eq!(
-            sk.to_raw_bytes(),
-            BtcPrivKey::deserialize("xprv9s21ZrQH143K25QhxbucbDDuQ4naNntJRi4KUfWT7xo4EKsHt2QJDu7KXp1A3u7Bi1j8ph3EGsZ9Xvz9dGuVrtHHs7pXeTzjuxBrCmmhgC6".to_string())
-                .unwrap()
-                .extended_key
-                .private_key
-                .secret_bytes()
+        bitcoin_sk_eq(
+            &sk,
+            &BtcPrivKey::deserialize("xprv9s21ZrQH143K25QhxbucbDDuQ4naNntJRi4KUfWT7xo4EKsHt2QJDu7KXp1A3u7Bi1j8ph3EGsZ9Xvz9dGuVrtHHs7pXeTzjuxBrCmmhgC6".to_string()).unwrap(),
         );
 
         let sk = sk.derive_key(0).unwrap();
+        bitcoin_sk_eq(
+            &sk,
+            &BtcPrivKey::deserialize("xprv9uPDJpEQgRQfDcW7BkF7eTya6RPxXeJCqCJGHuCJ4GiRVLzkTXBAJMu2qaMWPrS7AANYqdq6vcBcBUdJCVVFceUvJFjaPdGZ2y9WACViL4L".to_string()).unwrap(),
+        );
+    }
+
+    #[test]
+    fn import_export() {
+        let hex = "7b2254797065223a22736563703235366b31222c22507269766174654b6579223a226a7244314c48516258503942453964505635787350454237337a717441442b61644c52747a685a6646556f3d227d";
+        let sk = SecretKey::from_lotus_hex(hex).unwrap();
+        let addr = sk.public_key().to_address();
         assert_eq!(
-            sk.to_raw_bytes(),
-            BtcPrivKey::deserialize("xprv9uPDJpEQgRQfDcW7BkF7eTya6RPxXeJCqCJGHuCJ4GiRVLzkTXBAJMu2qaMWPrS7AANYqdq6vcBcBUdJCVVFceUvJFjaPdGZ2y9WACViL4L".to_string())
-                .unwrap()
-                .extended_key
-                .private_key
-                .secret_bytes()
-        )
+            addr.to_string(),
+            "f162husxmdufmecnuuzwzjwlbvuv6vy6hvvzy7x5y"
+        );
+        assert_eq!(sk.to_lotus_hex().unwrap(), hex);
+
+        let hex = "7b2254797065223a22626c73222c22507269766174654b6579223a22746d39534b6349696537354e3664595459764f67794b4277676f366570567a315651776c675459427569733d227d";
+        let sk = SecretKey::from_lotus_hex(hex).unwrap();
+        let addr = sk.public_key().to_address();
+        assert_eq!(addr.to_string(), "f3wo44vs6uyzuzc7dipubydfzrdwfwhjzovcvdx5bqpish5srqx7veq7chbmew4uqiwakzvb6r6gquvt3xvksa");
+        assert_eq!(sk.to_lotus_hex().unwrap(), hex);
     }
 }

@@ -2,10 +2,11 @@ use thiserror::Error;
 
 pub type Result<T> = std::result::Result<T, Error>;
 
+// TODO: 整理一下错误类型
 #[derive(Error, Debug)]
 pub enum Error {
     #[error("bad mnemonic: {0}")]
-    BadMnemonic(anyhow::Error),
+    BadMnemonic(#[from] bip39::Error),
     #[error("hdwallet error: {0}")]
     HdWallet(#[from] hdwallet::error::Error),
     #[error("blst erro: {0}")]
@@ -16,4 +17,8 @@ pub enum Error {
     CannotDerive,
     #[error("bad signature")]
     BadSignature,
+    #[error("hex error: {0}")]
+    HexError(#[from] hex::FromHexError),
+    #[error("serde error: {0}")]
+    SerdeError(#[from] serde_json::Error),
 }

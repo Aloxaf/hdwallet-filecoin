@@ -2,9 +2,9 @@ use crate::error::{Error, Result};
 use bip39::{Language, Mnemonic, Seed};
 use blake2b_simd::Params;
 
-pub fn mnemonic_to_seed(phrase: &str) -> Result<Seed> {
+pub fn mnemonic_to_seed(phrase: &str, passphrase: Option<&str>) -> Result<Seed> {
     let mnemonic = Mnemonic::from_phrase(phrase, Language::English).map_err(Error::BadMnemonic)?;
-    Ok(Seed::new(&mnemonic, ""))
+    Ok(Seed::new(&mnemonic, passphrase.unwrap_or_default()))
 }
 
 pub fn blake2b_256(data: &[u8]) -> [u8; 32] {

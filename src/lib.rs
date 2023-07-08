@@ -9,3 +9,4 @@ pub use address::Address;
 pub use public::PublicKey;
 pub use secert::SecretKey;
 pub use signature::Signature;
+pub use utils::mnemonic_to_seed;

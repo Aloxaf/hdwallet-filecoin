@@ -21,4 +21,12 @@ pub enum Error {
     HexError(#[from] hex::FromHexError),
     #[error("serde error: {0}")]
     SerdeError(#[from] serde_json::Error),
+    #[error("eth keystore error: {0}")]
+    EthStoreError(#[from] eth_keystore::KeystoreError),
+}
+
+impl From<blst::BLST_ERROR> for Error {
+    fn from(err: blst::BLST_ERROR) -> Self {
+        Self::Blst(err as u32)
+    }
 }

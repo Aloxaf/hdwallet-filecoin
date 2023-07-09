@@ -1,13 +1,10 @@
-mod address;
 mod error;
-mod json;
-mod public;
-mod secert;
-mod signature;
-mod utils;
+mod fil;
+mod wallet;
 
-pub use address::Address;
-pub use public::PublicKey;
-pub use secert::SecretKey;
-pub use signature::Signature;
-pub use utils::{mnemonic_to_seed, new_mnemonic};
+pub use fil::address::Address;
+pub use fil::public::PublicKey;
+pub use fil::secert::SecretKey;
+pub use fil::signature::Signature;
+pub use fil::utils::{mnemonic_to_seed, new_mnemonic};
+pub use wallet::LocalWallet;

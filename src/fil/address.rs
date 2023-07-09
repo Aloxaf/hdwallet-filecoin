@@ -1,7 +1,9 @@
-use crate::utils::address_hash;
+use std::fmt;
+
 use data_encoding::Encoding;
 use data_encoding_macro::new_encoding;
-use std::fmt;
+
+use super::utils::address_hash;
 
 pub const CHECKSUM_HASH_LEN: usize = 4;
 pub const PAYLOAD_HASH_LEN: usize = 20;

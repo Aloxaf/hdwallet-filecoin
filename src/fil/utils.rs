@@ -1,4 +1,3 @@
-use crate::error::Result;
 use bip39::Mnemonic;
 use blake2b_simd::Params;
 use blst::min_pk::SecretKey as BlsPrivate;
@@ -8,6 +7,8 @@ use blst::{
 };
 use rand::rngs::OsRng;
 use rand::RngCore;
+
+use crate::error::Result;
 
 pub fn mnemonic_to_seed(phrase: &str, passphrase: Option<&str>) -> Result<[u8; 64]> {
     let mnemonic = Mnemonic::parse(phrase)?;

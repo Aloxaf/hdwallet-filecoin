@@ -1,9 +1,10 @@
-use crate::error::{Error, Result};
-use crate::public::PublicKey;
-use crate::utils::blake2b_256;
 use blst::min_pk::Signature as BlsSignature;
 use blst::BLST_ERROR;
 use secp256k1::ecdsa::RecoverableSignature as SecpSignature;
+
+use super::public::PublicKey;
+use super::utils::blake2b_256;
+use crate::error::{Error, Result};
 
 pub enum Signature {
     Secp256k1(SecpSignature),
@@ -60,13 +61,20 @@ impl Signature {
 
 #[cfg(test)]
 mod tests {
-    use crate::SecretKey;
     use data_encoding_macro::hexlower;
+
+    use crate::fil::json::SecertKeyJson;
+    use crate::SecretKey;
+
+    fn sk_from_slice(data: &[u8]) -> SecretKey {
+        let skj = serde_json::from_slice::<SecertKeyJson>(data).unwrap();
+        SecretKey::try_from(skj).unwrap()
+    }
 
     #[test]
     fn secp256k1() {
-        let hex = "7b2254797065223a22736563703235366b31222c22507269766174654b6579223a226a7244314c48516258503942453964505635787350454237337a717441442b61644c52747a685a6646556f3d227d";
-        let sk = SecretKey::from_lotus_hex(hex).unwrap();
+        let hex = hexlower!("7b2254797065223a22736563703235366b31222c22507269766174654b6579223a226a7244314c48516258503942453964505635787350454237337a717441442b61644c52747a685a6646556f3d227d");
+        let sk = sk_from_slice(&hex);
         let msg = b"Hello World!";
         let sig = sk.sign(msg).unwrap();
         assert_eq!(
@@ -78,8 +86,8 @@ mod tests {
 
     #[test]
     fn bls() {
-        let hex = "7b2254797065223a22626c73222c22507269766174654b6579223a22746d39534b6349696537354e3664595459764f67794b4277676f366570567a315651776c675459427569733d227d";
-        let sk = SecretKey::from_lotus_hex(hex).unwrap();
+        let hex = hexlower!("7b2254797065223a22626c73222c22507269766174654b6579223a22746d39534b6349696537354e3664595459764f67794b4277676f366570567a315651776c675459427569733d227d");
+        let sk = sk_from_slice(&hex);
         let msg = b"Hello World!";
         let sig = sk.sign(msg).unwrap();
         assert_eq!(

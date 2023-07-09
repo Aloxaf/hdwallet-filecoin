@@ -3,7 +3,7 @@ use crate::public::PublicKey;
 use crate::utils::blake2b_256;
 use blst::min_pk::Signature as BlsSignature;
 use blst::BLST_ERROR;
-use secp256k1::ecdsa::Signature as SecpSignature;
+use secp256k1::ecdsa::RecoverableSignature as SecpSignature;
 
 pub enum Signature {
     Secp256k1(SecpSignature),
@@ -17,7 +17,10 @@ impl Signature {
                 let hash = blake2b_256(msg);
                 let msg = secp256k1::Message::from_slice(&hash)?;
                 if let PublicKey::Secp256k1(pk) = pk {
-                    sig.verify(&msg, pk)?;
+                    let rpk = sig.recover(&msg)?;
+                    if &rpk != pk {
+                        return Err(Error::BadSignature);
+                    }
                 } else {
                     return Err(Error::BadSignature);
                 }
@@ -40,15 +43,49 @@ impl Signature {
     pub fn to_bytes(&self) -> Vec<u8> {
         match self {
             Self::Secp256k1(sig) => {
+                let (rid, b) = sig.serialize_compact();
                 let mut v = vec![1];
-                v.extend_from_slice(sig.serialize_compact());
+                v.extend_from_slice(&b);
+                v.push(rid.to_i32() as u8);
                 v
             }
             Self::Bls(sig) => {
                 let mut v = vec![2];
-                v.extend_from_slice(sig.compress());
+                v.extend_from_slice(&sig.compress());
                 v
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::SecretKey;
+    use data_encoding_macro::hexlower;
+
+    #[test]
+    fn secp256k1() {
+        let hex = "7b2254797065223a22736563703235366b31222c22507269766174654b6579223a226a7244314c48516258503942453964505635787350454237337a717441442b61644c52747a685a6646556f3d227d";
+        let sk = SecretKey::from_lotus_hex(hex).unwrap();
+        let msg = b"Hello World!";
+        let sig = sk.sign(msg).unwrap();
+        assert_eq!(
+            sig.to_bytes(),
+            hexlower!("01aa665dd45bdc2eb4500dc1446c5fb9472c1d02371dd55c8fb396659d3a08795873afee70c20de206820769ec343a6bb310bad4604ab3a3472ce6d0fd5b3ad9a000"),
+        );
+        assert!(sig.verify(msg, &sk.public_key()).is_ok());
+    }
+
+    #[test]
+    fn bls() {
+        let hex = "7b2254797065223a22626c73222c22507269766174654b6579223a22746d39534b6349696537354e3664595459764f67794b4277676f366570567a315651776c675459427569733d227d";
+        let sk = SecretKey::from_lotus_hex(hex).unwrap();
+        let msg = b"Hello World!";
+        let sig = sk.sign(msg).unwrap();
+        assert_eq!(
+            sig.to_bytes(),
+            hexlower!("02ad03104578a146f973d29609520f760b57657b74d00a91f55e019c3ca4f4452762678a63895b82dc0ae7e34905e2270106f238a05fa979453732105d2be77f1152ec8e4e829755e09346ea2ad8f8632b52b449218799e6960ac0e13d00332f35"),
+        );
+        assert!(sig.verify(msg, &sk.public_key()).is_ok());
     }
 }

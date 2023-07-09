@@ -1,7 +1,7 @@
 use blst::min_pk::SecretKey as BlsPrivate;
 use hdwallet::ExtendedPrivKey as SecpExtendedPrivate;
 use hdwallet::KeyIndex;
-use secp256k1::SecretKey as SecpPrivate;
+use secp256k1::{Message as SecpMessage, SecretKey as SecpPrivate, SECP256K1};
 
 use crate::error::{Error, Result};
 use crate::json::{SecertKeyJson, SigType};
@@ -103,8 +103,8 @@ impl SecretKey {
             })
             | Self::Secp256k1(sk) => {
                 let hash = blake2b_256(msg);
-                let msg = secp256k1::Message::from_slice(&hash)?;
-                let sig = sk.sign_ecdsa(msg);
+                let msg = SecpMessage::from_slice(&hash)?;
+                let sig = SECP256K1.sign_ecdsa_recoverable(&msg, sk);
                 Ok(Signature::Secp256k1(sig))
             }
             Self::Bls(sk) => {

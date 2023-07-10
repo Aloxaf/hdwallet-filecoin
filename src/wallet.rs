@@ -1,12 +1,13 @@
 use std::path::PathBuf;
 
+use bip39::Mnemonic;
 use data_encoding::BASE32_NOPAD;
 use eth_keystore::{decrypt_key, encrypt_key};
 use rand::rngs::OsRng;
 use rand::RngCore;
 
 use crate::error::Result;
-use crate::fil::json::SecertKeyJson;
+use crate::fil::json::{SecertKeyJson, SigType};
 use crate::SecretKey;
 
 pub struct LocalWallet {
@@ -32,6 +33,17 @@ impl LocalWallet {
         Ok(s)
     }
 
+    /// generate a new key, return the address and mnemonic words
+    pub fn generate(&self, sig_type: SigType, passphrase: &str) -> Result<(String, Vec<String>)> {
+        let mut entropy = [0u8; 32];
+        OsRng.fill_bytes(&mut entropy);
+        let mnemonic = Mnemonic::from_entropy(&entropy)?;
+        let sk = SecretKey::from_seed(sig_type, &mnemonic.to_seed(passphrase))?;
+        let addr = sk.public_key().address().to_string();
+        self.encrypt(&addr, &sk.serialize(), passphrase)?;
+        Ok((addr, mnemonic.word_iter().map(|s| s.to_owned()).collect()))
+    }
+
     /// import private key from lotus hex format
     pub fn import(&self, hex: &str, passphrase: &str) -> Result<()> {
         let bytes = hex::decode(hex)?;
@@ -48,6 +60,15 @@ impl LocalWallet {
         let json = SecertKeyJson::from(sk);
         let bytes = serde_json::to_vec(&json)?;
         Ok(hex::encode(bytes))
+    }
+
+    /// derive child key from given addr
+    pub fn derive(&self, addr: &str, index: u32, passphrase: &str) -> Result<String> {
+        let sk = self.get(addr, passphrase)?;
+        let child_sk = sk.derive_key(index)?;
+        let child_addr = child_sk.public_key().address().to_string();
+        self.encrypt(&child_addr, &child_sk.serialize(), passphrase)?;
+        Ok(child_addr)
     }
 
     /// list all addresses
@@ -122,7 +143,10 @@ mod tests {
             .unwrap();
         assert_eq!(hex, hex2);
 
-        assert_eq!(lw.list().unwrap(), vec!["f162husxmdufmecnuuzwzjwlbvuv6vy6hvvzy7x5y"]);
+        assert_eq!(
+            lw.list().unwrap(),
+            vec!["f162husxmdufmecnuuzwzjwlbvuv6vy6hvvzy7x5y"]
+        );
 
         let lw = LocalWallet::new("/tmp/keystore", "bad");
         assert!(lw.is_err());

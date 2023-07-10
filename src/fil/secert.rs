@@ -8,6 +8,7 @@ use super::public::PublicKey;
 use super::signature::Signature;
 use super::utils::blake2b_256;
 use crate::error::{Error, Result};
+use crate::fil::json::SigType;
 
 // TODO: zeroize it
 pub enum SecretKey {
@@ -17,6 +18,13 @@ pub enum SecretKey {
 }
 
 impl SecretKey {
+    pub fn from_seed(sig_type: SigType, seed: &[u8]) -> Result<Self> {
+        match sig_type {
+            SigType::Secp256k1 => Self::from_seed_secp(seed),
+            SigType::Bls => Self::from_seed_bls(seed),
+        }
+    }
+
     /// Generate a new secp256k1 secret key from a seed.
     pub fn from_seed_secp(seed: &[u8]) -> Result<Self> {
         let sk = SecpExtendedPrivate::with_seed(seed)?;

@@ -9,7 +9,7 @@ pub enum PublicKey {
 }
 
 impl PublicKey {
-    pub fn to_address(&self) -> Address {
+    pub fn address(&self) -> Address {
         match self {
             Self::Secp256k1(pk) => Address::new_secp256k1(&pk.serialize_uncompressed()),
             Self::Bls(pk) => Address::new_bls(&pk.compress()),

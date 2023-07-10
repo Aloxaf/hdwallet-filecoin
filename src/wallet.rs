@@ -1,28 +1,35 @@
 use std::path::PathBuf;
 
+use data_encoding::BASE32_NOPAD;
 use eth_keystore::{decrypt_key, encrypt_key};
 use rand::rngs::OsRng;
-use uuid::Uuid;
+use rand::RngCore;
 
 use crate::error::Result;
 use crate::fil::json::SecertKeyJson;
 use crate::SecretKey;
-
-const NAMESPACE_FILADDR: Uuid = Uuid::from_bytes([
-    0xb0, 0x28, 0x17, 0x47, 0x10, 0xc6, 0x4a, 0xb6, 0x8e, 0xaa, 0x1b, 0x0e, 0x2d, 0x07, 0xed, 0xc5,
-]);
 
 pub struct LocalWallet {
     path: PathBuf,
 }
 
 impl LocalWallet {
-    pub fn new<P: Into<PathBuf>>(path: P) -> Self {
+    pub fn new<P: Into<PathBuf>>(path: P, passphrase: &str) -> Result<Self> {
         let path = path.into();
         if !path.exists() {
             std::fs::create_dir_all(&path).unwrap();
         }
-        Self { path }
+        let s = Self { path: path.clone() };
+
+        if path.join(key_name("init")).exists() {
+            s.decrypt("init", passphrase)?;
+        } else {
+            let mut random = [0u8; 32];
+            OsRng.fill_bytes(&mut random);
+            s.encrypt("init", &random, passphrase)?;
+        }
+
+        Ok(s)
     }
 
     /// import private key from lotus hex format
@@ -30,15 +37,8 @@ impl LocalWallet {
         let bytes = hex::decode(hex)?;
         let json = serde_json::from_slice::<SecertKeyJson>(&bytes)?;
         let sk = SecretKey::try_from(json)?;
-        // TODO: 这里使用 to_bytes 是不是更好？
-        let addr = sk.public_key().to_address().to_string();
-        encrypt_key(
-            &self.path,
-            &mut OsRng,
-            sk.serialize(),
-            passphrase.as_bytes(),
-            Some(&*key_name(&addr)),
-        )?;
+        let addr = sk.public_key().address().to_string();
+        self.encrypt(&addr, &sk.serialize(), passphrase)?;
         Ok(())
     }
 
@@ -50,16 +50,61 @@ impl LocalWallet {
         Ok(hex::encode(bytes))
     }
 
-    fn get(&self, addr: &str, passphrase: &str) -> Result<SecretKey> {
+    /// list all addresses
+    pub fn list(&self) -> Result<Vec<String>> {
+        let mut addrs = vec![];
+        for entry in std::fs::read_dir(&self.path)? {
+            let name = BASE32_NOPAD
+                .decode(entry?.file_name().to_str().unwrap().as_bytes())
+                .ok()
+                .and_then(|v| String::from_utf8(v).ok());
+            if let Some(name) = name {
+                if name != "init" {
+                    addrs.push(name);
+                }
+            }
+        }
+        Ok(addrs)
+    }
+
+    /// sign message with given addr
+    pub fn sign(&self, addr: &str, msg: &[u8], passphrase: &str) -> Result<Vec<u8>> {
+        let sk = self.get(addr, passphrase)?;
+        let sig = sk.sign(msg)?;
+        Ok(sig.serialize())
+    }
+
+    /// delete key with given addr
+    pub fn delete(&self, addr: &str, passphrase: &str) -> Result<()> {
+        let _ = self.get(addr, passphrase)?;
         let path = self.path.join(key_name(addr));
-        let bytes = decrypt_key(path, passphrase)?;
+        std::fs::remove_file(path)?;
+        Ok(())
+    }
+
+    fn get(&self, addr: &str, passphrase: &str) -> Result<SecretKey> {
+        let bytes = self.decrypt(addr, passphrase)?;
         SecretKey::deserialize(&bytes)
+    }
+
+    fn decrypt(&self, addr: &str, passphrase: &str) -> Result<Vec<u8>> {
+        let path = self.path.join(key_name(addr));
+        Ok(decrypt_key(path, passphrase)?)
+    }
+
+    fn encrypt(&self, addr: &str, data: &[u8], passphrase: &str) -> Result<String> {
+        Ok(encrypt_key(
+            &self.path,
+            &mut OsRng,
+            data,
+            passphrase.as_bytes(),
+            Some(&*key_name(addr)),
+        )?)
     }
 }
 
 fn key_name(addr: &str) -> String {
-    let uuid = Uuid::new_v5(&NAMESPACE_FILADDR, &addr.as_bytes());
-    format!("{}.json", uuid.to_string())
+    BASE32_NOPAD.encode(addr.as_bytes())
 }
 
 #[cfg(test)]
@@ -70,9 +115,16 @@ mod tests {
     fn import_export() {
         let hex = "7b2254797065223a22736563703235366b31222c22507269766174654b6579223a226a7244314c48516258503942453964505635787350454237337a717441442b61644c52747a685a6646556f3d227d";
         let passphrase = "123456";
-        let lw = LocalWallet::new("/tmp/keystore");
+        let lw = LocalWallet::new("/tmp/keystore", passphrase).unwrap();
         lw.import(hex, passphrase).unwrap();
-        let hex2 = lw.export("f162husxmdufmecnuuzwzjwlbvuv6vy6hvvzy7x5y", passphrase).unwrap();
+        let hex2 = lw
+            .export("f162husxmdufmecnuuzwzjwlbvuv6vy6hvvzy7x5y", passphrase)
+            .unwrap();
         assert_eq!(hex, hex2);
+
+        assert_eq!(lw.list().unwrap(), vec!["f162husxmdufmecnuuzwzjwlbvuv6vy6hvvzy7x5y"]);
+
+        let lw = LocalWallet::new("/tmp/keystore", "bad");
+        assert!(lw.is_err());
     }
 }

@@ -12,6 +12,7 @@ pub enum Signature {
 }
 
 impl Signature {
+    /// verify signature with given message and public key
     pub fn verify(&self, msg: &[u8], pk: &PublicKey) -> Result<()> {
         match self {
             Self::Secp256k1(sig) => {
@@ -41,7 +42,8 @@ impl Signature {
         Ok(())
     }
 
-    pub fn to_bytes(&self) -> Vec<u8> {
+    /// convert to bytes with sig type
+    pub fn serialize(&self) -> Vec<u8> {
         match self {
             Self::Secp256k1(sig) => {
                 let (rid, b) = sig.serialize_compact();
@@ -78,7 +80,7 @@ mod tests {
         let msg = b"Hello World!";
         let sig = sk.sign(msg).unwrap();
         assert_eq!(
-            sig.to_bytes(),
+            sig.serialize(),
             hexlower!("01aa665dd45bdc2eb4500dc1446c5fb9472c1d02371dd55c8fb396659d3a08795873afee70c20de206820769ec343a6bb310bad4604ab3a3472ce6d0fd5b3ad9a000"),
         );
         assert!(sig.verify(msg, &sk.public_key()).is_ok());
@@ -91,7 +93,7 @@ mod tests {
         let msg = b"Hello World!";
         let sig = sk.sign(msg).unwrap();
         assert_eq!(
-            sig.to_bytes(),
+            sig.serialize(),
             hexlower!("02ad03104578a146f973d29609520f760b57657b74d00a91f55e019c3ca4f4452762678a63895b82dc0ae7e34905e2270106f238a05fa979453732105d2be77f1152ec8e4e829755e09346ea2ad8f8632b52b449218799e6960ac0e13d00332f35"),
         );
         assert!(sig.verify(msg, &sk.public_key()).is_ok());

@@ -33,7 +33,7 @@ impl LocalWallet {
         Ok(s)
     }
 
-    fn verify(&self, passphrase: &str) -> Result<()> {
+    pub fn verify(&self, passphrase: &str) -> Result<()> {
         let _ = self.decrypt("init", passphrase)?;
         Ok(())
     }

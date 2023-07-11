@@ -8,7 +8,7 @@ use rand::RngCore;
 
 use crate::error::Result;
 use crate::fil::json::{SecertKeyJson, SigType};
-use crate::SecretKey;
+use crate::{mnemonic_to_seed, SecretKey};
 
 pub struct LocalWallet {
     path: PathBuf,
@@ -33,29 +33,53 @@ impl LocalWallet {
         Ok(s)
     }
 
+    fn verify(&self, passphrase: &str) -> Result<()> {
+        let _ = self.decrypt("init", passphrase)?;
+        Ok(())
+    }
+
     /// generate a new key, return the address and mnemonic words
     pub fn generate(&self, sig_type: SigType, passphrase: &str) -> Result<(String, Vec<String>)> {
+        self.verify(passphrase)?;
         let mut entropy = [0u8; 32];
         OsRng.fill_bytes(&mut entropy);
         let mnemonic = Mnemonic::from_entropy(&entropy)?;
-        let sk = SecretKey::from_seed(sig_type, &mnemonic.to_seed(passphrase))?;
+        let sk = SecretKey::from_seed(sig_type, &mnemonic.to_seed(""))?;
         let addr = sk.public_key().address().to_string();
         self.encrypt(&addr, &sk.serialize(), passphrase)?;
         Ok((addr, mnemonic.word_iter().map(|s| s.to_owned()).collect()))
     }
 
+    /// import private key from mnemonic
+    /// return public address
+    pub fn import_mnemonic(
+        &self,
+        sig_type: SigType,
+        mnemonic: &str,
+        passphrase: &str,
+    ) -> Result<String> {
+        self.verify(passphrase)?;
+        let seed = mnemonic_to_seed(mnemonic, None)?;
+        let sk = SecretKey::from_seed(sig_type, &seed)?;
+        let addr = sk.public_key().address().to_string();
+        self.encrypt(&addr, &sk.serialize(), passphrase)?;
+        Ok(addr)
+    }
+
     /// import private key from lotus hex format
-    pub fn import(&self, hex: &str, passphrase: &str) -> Result<()> {
+    /// return public address
+    pub fn import_hex(&self, hex: &str, passphrase: &str) -> Result<String> {
+        self.verify(passphrase)?;
         let bytes = hex::decode(hex)?;
         let json = serde_json::from_slice::<SecertKeyJson>(&bytes)?;
         let sk = SecretKey::try_from(json)?;
         let addr = sk.public_key().address().to_string();
         self.encrypt(&addr, &sk.serialize(), passphrase)?;
-        Ok(())
+        Ok(addr)
     }
 
     /// export private key to lotus hex format
-    pub fn export(&self, addr: &str, passphrase: &str) -> Result<String> {
+    pub fn export_hex(&self, addr: &str, passphrase: &str) -> Result<String> {
         let sk = self.get(addr, passphrase)?;
         let json = SecertKeyJson::from(sk);
         let bytes = serde_json::to_vec(&json)?;
@@ -131,15 +155,16 @@ fn key_name(addr: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::LocalWallet;
+    use crate::SigType;
 
     #[test]
     fn import_export() {
         let hex = "7b2254797065223a22736563703235366b31222c22507269766174654b6579223a226a7244314c48516258503942453964505635787350454237337a717441442b61644c52747a685a6646556f3d227d";
         let passphrase = "123456";
         let lw = LocalWallet::new("/tmp/keystore", passphrase).unwrap();
-        lw.import(hex, passphrase).unwrap();
+        lw.import_hex(hex, passphrase).unwrap();
         let hex2 = lw
-            .export("f162husxmdufmecnuuzwzjwlbvuv6vy6hvvzy7x5y", passphrase)
+            .export_hex("f162husxmdufmecnuuzwzjwlbvuv6vy6hvvzy7x5y", passphrase)
             .unwrap();
         assert_eq!(hex, hex2);
 

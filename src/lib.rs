@@ -3,6 +3,7 @@ mod fil;
 mod wallet;
 
 pub use fil::address::Address;
+pub use fil::json::SigType;
 pub use fil::public::PublicKey;
 pub use fil::secert::SecretKey;
 pub use fil::signature::Signature;

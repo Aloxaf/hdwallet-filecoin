@@ -65,7 +65,7 @@ impl Signature {
 mod tests {
     use data_encoding_macro::hexlower;
 
-    use crate::fil::json::SecertKeyJson;
+    use crate::json::SecertKeyJson;
     use crate::SecretKey;
 
     fn sk_from_slice(data: &[u8]) -> SecretKey {

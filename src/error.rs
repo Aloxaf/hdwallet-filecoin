@@ -21,8 +21,6 @@ pub enum Error {
     HexError(#[from] hex::FromHexError),
     #[error("serde error: {0}")]
     SerdeError(#[from] serde_json::Error),
-    #[error("eth keystore error: {0}")]
-    EthStoreError(#[from] eth_keystore::KeystoreError),
     #[error("io error: {0}")]
     IoError(#[from] std::io::Error),
 }

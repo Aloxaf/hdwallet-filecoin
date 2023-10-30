@@ -6,7 +6,7 @@ use zeroize::{Zeroize, ZeroizeOnDrop};
 
 use super::secert::SecretKey;
 use crate::error::Error;
-use crate::fil::utils::{bls_deserialize, bls_serialize};
+use crate::utils::{bls_deserialize, bls_serialize};
 
 base64_serde_type!(Base64Standard, base64::engine::general_purpose::STANDARD);
 

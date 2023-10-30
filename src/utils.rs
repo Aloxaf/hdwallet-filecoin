@@ -15,11 +15,10 @@ pub fn mnemonic_to_seed(phrase: &str, passphrase: Option<&str>) -> Result<[u8; 6
     Ok(mnemonic.to_seed(passphrase.unwrap_or_default()))
 }
 
-pub fn new_mnemonic() -> Result<Vec<String>> {
+pub fn new_mnemonic() -> Result<Mnemonic> {
     let mut entropy = [0u8; 32];
     OsRng.fill_bytes(&mut entropy);
-    let mnemonic = Mnemonic::from_entropy(&entropy)?;
-    Ok(mnemonic.word_iter().map(|s| s.to_owned()).collect())
+    Ok(Mnemonic::from_entropy(&entropy)?)
 }
 
 pub fn blake2b_256(data: &[u8]) -> [u8; 32] {

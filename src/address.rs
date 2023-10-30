@@ -22,17 +22,13 @@ pub enum Address {
 
 impl Address {
     /// Generates new address using Secp256k1 pubkey.
-    pub fn new_secp256k1(pubkey: &[u8]) -> Self {
-        assert_eq!(pubkey.len(), SECP_PUB_LEN);
-        Self::Secp256k1(address_hash(pubkey))
+    pub fn new_secp256k1(pubkey: [u8; SECP_PUB_LEN]) -> Self {
+        Self::Secp256k1(address_hash(&pubkey))
     }
 
     /// Generates new address using BLS pubkey.
-    pub fn new_bls(pubkey: &[u8]) -> Self {
-        assert_eq!(pubkey.len(), BLS_PUB_LEN);
-        let mut key = [0u8; BLS_PUB_LEN];
-        key.copy_from_slice(pubkey);
-        Self::Bls(key)
+    pub fn new_bls(pubkey: [u8; BLS_PUB_LEN]) -> Self {
+        Self::Bls(pubkey)
     }
 
     /// Returns encoded bytes of Address without the protocol byte.

@@ -4,11 +4,11 @@ use hdwallet::ExtendedPrivKey as SecpExtendedPrivate;
 use hdwallet::KeyIndex;
 use secp256k1::{Message as SecpMessage, SecretKey as SecpPrivate, SECP256K1};
 
+use super::error::{Error, Result};
+use super::json::SigType;
 use super::public::PublicKey;
 use super::signature::Signature;
 use super::utils::blake2b_256;
-use crate::error::{Error, Result};
-use crate::fil::json::SigType;
 
 // TODO: zeroize it
 pub enum SecretKey {
@@ -136,7 +136,7 @@ mod tests {
     use ibig::ubig;
 
     use super::SecretKey;
-    use crate::fil::utils::mnemonic_to_seed;
+    use crate::utils::mnemonic_to_seed;
 
     // https://eips.ethereum.org/EIPS/eip-2333#test-case-0
     #[test]

@@ -1,16 +1,13 @@
-use rand::RngCore;
-
 use super::error::Result;
-use super::json::{SecertKeyJson};
+use super::json::SecertKeyJson;
 use super::SecretKey;
-
 
 /// import private key from lotus hex format
 /// return public address
 pub fn import_hex(hex: &str) -> Result<SecretKey> {
     let bytes = hex::decode(hex)?;
     let json = serde_json::from_slice::<SecertKeyJson>(&bytes)?;
-    Ok(SecretKey::try_from(json)?)
+    SecretKey::try_from(json)
 }
 
 /// export private key to lotus hex format

@@ -20,14 +20,15 @@
 mod error;
 //mod wallet;
 mod address;
+mod hex;
 mod json;
 mod public;
 mod secert;
 mod signature;
 mod utils;
-mod hex;
 
 pub use address::Address;
+pub use hex::{export_hex, import_hex};
 pub use json::SigType;
 pub use public::PublicKey;
 pub use secert::SecretKey;

@@ -1,8 +1,13 @@
 [package]
 name = "hdwallet-filecoin"
-description = "HD Wallet for Filecoin, including key generation, derivation and signing"
 version = "0.1.0"
+description = "HD Wallet for Filecoin, including key generation, derivation and signing"
+keywords = ["filecoin", "hdwallet", "wallet"]
+authors = ["Aloxaf <aloxafx@gmail.com>"]
 edition = "2021"
+license = "MIT"
+repository = "https://github.com/Aloxaf/hdwallet-filecoin"
+readme = "README.md"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 

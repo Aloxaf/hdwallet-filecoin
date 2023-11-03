@@ -164,7 +164,6 @@ fn key_name(addr: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::LocalWallet;
-    use crate::SigType;
 
     #[test]
     fn import_export() {

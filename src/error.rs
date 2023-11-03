@@ -23,6 +23,7 @@ pub enum Error {
     SerdeError(#[from] serde_json::Error),
     #[error("io error: {0}")]
     IoError(#[from] std::io::Error),
+    #[cfg(feature = "keystore")]
     #[error("eth keystore error: {0}")]
     EthStoreError(#[from] eth_keystore::KeystoreError),
 }

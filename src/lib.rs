@@ -26,6 +26,7 @@ mod public;
 mod secert;
 mod signature;
 mod utils;
+#[cfg(feature = "keystore")]
 mod wallet;
 
 pub use address::Address;
@@ -35,4 +36,5 @@ pub use public::PublicKey;
 pub use secert::SecretKey;
 pub use signature::Signature;
 pub use utils::{mnemonic_to_seed, new_mnemonic};
+#[cfg(feature = "keystore")]
 pub use wallet::LocalWallet;

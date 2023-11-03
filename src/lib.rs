@@ -26,6 +26,7 @@ mod public;
 mod secert;
 mod signature;
 mod utils;
+mod wallet;
 
 pub use address::Address;
 pub use hex::{export_hex, import_hex};
@@ -34,3 +35,4 @@ pub use public::PublicKey;
 pub use secert::SecretKey;
 pub use signature::Signature;
 pub use utils::{mnemonic_to_seed, new_mnemonic};
+pub use wallet::LocalWallet;

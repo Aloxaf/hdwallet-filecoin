@@ -1,6 +1,6 @@
 [package]
 name = "hdwallet-filecoin"
-version = "0.1.0"
+version = "0.2.0"
 description = "HD Wallet for Filecoin, including key generation, derivation and signing"
 keywords = ["filecoin", "hdwallet", "wallet"]
 authors = ["Aloxaf <aloxafx@gmail.com>"]
@@ -19,6 +19,7 @@ blake2b_simd = "1.0.2"
 blst = { version = "0.3.11", features = ["portable"] }
 data-encoding = "2.4.0"
 data-encoding-macro = "0.1.13"
+eth-keystore = "0.5.0"
 hdwallet = "0.4.1"
 hex = "0.4.3"
 rand = "0.8.5"

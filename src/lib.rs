@@ -38,3 +38,5 @@ pub use signature::Signature;
 pub use utils::{mnemonic_to_seed, new_mnemonic};
 #[cfg(feature = "keystore")]
 pub use wallet::LocalWallet;
+
+pub use hdpath::CustomHDPath;

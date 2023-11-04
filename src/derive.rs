@@ -8,9 +8,9 @@ use crate::{error::Result, PrivateKey};
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct ExtendedPrivateKey {
     #[serde(serialize_with = "serde_sk", deserialize_with = "deserde_sk")]
-    key: PrivateKey,
+    pub key: PrivateKey,
     #[serde(serialize_with = "serde_path", deserialize_with = "deserde_path")]
-    path: CustomHDPath,
+    pub path: CustomHDPath,
 }
 
 impl ExtendedPrivateKey {

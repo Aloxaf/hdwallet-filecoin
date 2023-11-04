@@ -1,13 +1,13 @@
 //! # Usage
 //!
 //! ```rust
-//! use hdwallet_filecoin::{new_mnemonic, SecretKey};
+//! use hdwallet_filecoin::{new_mnemonic, PrivateKey};
 //!
 //! let mnemonic = new_mnemonic().unwrap();
 //! println!("{}", mnemonic);
 //! let seed = mnemonic.to_seed("");
 //!
-//! let sk = SecretKey::from_seed_bls(&seed).unwrap();
+//! let sk = PrivateKey::from_seed_bls(&seed).unwrap();
 //! let pk = sk.public_key();
 //! println!("{}", pk.address());
 //!
@@ -20,7 +20,7 @@
 mod error;
 //mod wallet;
 mod address;
-mod hex;
+mod derive;
 mod json;
 mod public;
 mod secert;
@@ -30,10 +30,10 @@ mod utils;
 mod wallet;
 
 pub use address::Address;
-pub use hex::{export_hex, import_hex};
+pub use derive::ExtendedPrivateKey;
 pub use json::SigType;
 pub use public::PublicKey;
-pub use secert::SecretKey;
+pub use secert::PrivateKey;
 pub use signature::Signature;
 pub use utils::{mnemonic_to_seed, new_mnemonic};
 #[cfg(feature = "keystore")]

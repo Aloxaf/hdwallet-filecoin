@@ -8,7 +8,7 @@ use rand::RngCore;
 
 use crate::error::Result;
 use crate::json::{SecertKeyJson, SigType};
-use crate::{mnemonic_to_seed, SecretKey};
+use crate::{mnemonic_to_seed, PrivateKey};
 
 pub struct LocalWallet {
     path: PathBuf,
@@ -47,7 +47,7 @@ impl LocalWallet {
         let mut entropy = [0u8; 32];
         OsRng.fill_bytes(&mut entropy);
         let mnemonic = Mnemonic::from_entropy(&entropy)?;
-        let sk = SecretKey::from_seed(sig_type, &mnemonic.to_seed(""))?;
+        let sk = PrivateKey::from_seed(sig_type, &mnemonic.to_seed(""))?;
         let addr = sk.public_key().address().to_string();
         self.encrypt(&addr, &sk.serialize(), passphrase)?;
         Ok((addr, mnemonic.word_iter().map(|s| s.to_owned()).collect()))
@@ -63,7 +63,7 @@ impl LocalWallet {
     ) -> Result<String> {
         self.verify(passphrase)?;
         let seed = mnemonic_to_seed(mnemonic, None)?;
-        let sk = SecretKey::from_seed(sig_type, &seed)?;
+        let sk = PrivateKey::from_seed(sig_type, &seed)?;
         let addr = sk.public_key().address().to_string();
         self.encrypt(&addr, &sk.serialize(), passphrase)?;
         Ok(addr)
@@ -75,7 +75,7 @@ impl LocalWallet {
         self.verify(passphrase)?;
         let bytes = hex::decode(hex)?;
         let json = serde_json::from_slice::<SecertKeyJson>(&bytes)?;
-        let sk = SecretKey::try_from(json)?;
+        let sk = PrivateKey::try_from(json)?;
         let addr = sk.public_key().address().to_string();
         self.encrypt(&addr, &sk.serialize(), passphrase)?;
         Ok(addr)
@@ -136,9 +136,9 @@ impl LocalWallet {
         path.exists()
     }
 
-    fn get(&self, addr: &str, passphrase: &str) -> Result<SecretKey> {
+    fn get(&self, addr: &str, passphrase: &str) -> Result<PrivateKey> {
         let bytes = self.decrypt(addr, passphrase)?;
-        SecretKey::deserialize(&bytes)
+        PrivateKey::deserialize(&bytes)
     }
 
     fn decrypt(&self, addr: &str, passphrase: &str) -> Result<Vec<u8>> {

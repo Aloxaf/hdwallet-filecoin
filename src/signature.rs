@@ -66,11 +66,11 @@ mod tests {
     use data_encoding_macro::hexlower;
 
     use crate::json::SecertKeyJson;
-    use crate::SecretKey;
+    use crate::PrivateKey;
 
-    fn sk_from_slice(data: &[u8]) -> SecretKey {
+    fn sk_from_slice(data: &[u8]) -> PrivateKey {
         let skj = serde_json::from_slice::<SecertKeyJson>(data).unwrap();
-        SecretKey::try_from(skj).unwrap()
+        PrivateKey::try_from(skj).unwrap()
     }
 
     #[test]

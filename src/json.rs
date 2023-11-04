@@ -4,7 +4,7 @@ use secp256k1::SecretKey as SecpPrivate;
 use serde::{Deserialize, Serialize};
 use zeroize::{Zeroize, ZeroizeOnDrop};
 
-use super::secert::SecretKey;
+use super::secert::PrivateKey;
 use crate::error::Error;
 use crate::utils::{bls_deserialize, bls_serialize};
 
@@ -26,17 +26,17 @@ pub struct SecertKeyJson {
     pub private_key: Vec<u8>,
 }
 
-impl From<SecretKey> for SecertKeyJson {
-    fn from(value: SecretKey) -> Self {
+impl From<PrivateKey> for SecertKeyJson {
+    fn from(value: PrivateKey) -> Self {
         match value {
-            SecretKey::Bls(sk) => Self {
+            PrivateKey::Bls(sk) => Self {
                 sig_type: SigType::Bls,
                 private_key: bls_serialize(&sk).unwrap().to_vec(),
             },
-            SecretKey::Secp256k1Extended(SecpExtendedPrivate {
+            PrivateKey::Secp256k1Extended(SecpExtendedPrivate {
                 private_key: sk, ..
             })
-            | SecretKey::Secp256k1(sk) => Self {
+            | PrivateKey::Secp256k1(sk) => Self {
                 sig_type: SigType::Secp256k1,
                 private_key: sk.secret_bytes().to_vec(),
             },
@@ -44,7 +44,7 @@ impl From<SecretKey> for SecertKeyJson {
     }
 }
 
-impl TryFrom<SecertKeyJson> for SecretKey {
+impl TryFrom<SecertKeyJson> for PrivateKey {
     type Error = Error;
 
     fn try_from(v: SecertKeyJson) -> Result<Self, Self::Error> {
@@ -72,7 +72,7 @@ mod tests {
     fn secp_serialize() {
         let hex = hexlower!("7b2254797065223a22736563703235366b31222c22507269766174654b6579223a226a7244314c48516258503942453964505635787350454237337a717441442b61644c52747a685a6646556f3d227d");
         let skj = serde_json::from_slice::<SecertKeyJson>(&hex).unwrap();
-        let sk = SecretKey::try_from(skj).unwrap();
+        let sk = PrivateKey::try_from(skj).unwrap();
         let addr = sk.public_key().address();
         assert_eq!(
             addr.to_string(),
@@ -88,7 +88,7 @@ mod tests {
     fn bls_serialize() {
         let hex = hexlower!("7b2254797065223a22626c73222c22507269766174654b6579223a22746d39534b6349696537354e3664595459764f67794b4277676f366570567a315651776c675459427569733d227d");
         let skj = serde_json::from_slice::<SecertKeyJson>(&hex).unwrap();
-        let sk = SecretKey::try_from(skj).unwrap();
+        let sk = PrivateKey::try_from(skj).unwrap();
         let addr = sk.public_key().address();
         assert_eq!(addr.to_string(), "f3wo44vs6uyzuzc7dipubydfzrdwfwhjzovcvdx5bqpish5srqx7veq7chbmew4uqiwakzvb6r6gquvt3xvksa");
 

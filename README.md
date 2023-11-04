@@ -7,8 +7,12 @@ This implemention follows:
 - [BIP-39](https://github.com/bitcoin/bips/blob/master/bip-0039.mediawiki) for mnemonic word
 - [BIP-32](https://github.com/bitcoin/bips/blob/master/bip-0032.mediawiki) for secp256k1 derivation
 - [EIP-2333](https://eips.ethereum.org/EIPS/eip-2333) for bls12-381 derivation
-- [BIP-44](https://github.com/bitcoin/bips/blob/master/bip-0044.mediawiki) for hierarchical deterministic path
+~~- [BIP-44](https://github.com/bitcoin/bips/blob/master/bip-0044.mediawiki) for hierarchical deterministic path~~
 - [Web3 Secret Storage Definition](https://github.com/ethereum/wiki/wiki/Web3-Secret-Storage-Definition) for keystore
+
+**NOTE: Filecoin has not officially announced that it is compatible with any of the above proposals**
+
+**Please do not expect this library to be compatible with third-party wallets.**
 
 ## Usage
 

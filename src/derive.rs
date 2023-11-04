@@ -32,8 +32,8 @@ impl ExtendedPrivateKey {
         Ok(Self { key, path })
     }
 
-    pub fn to_hex(self) -> Result<String> {
-        self.key.to_hex()
+    pub fn to_hex(&self) -> Result<String> {
+        self.key.clone().to_hex()
     }
 
     pub fn derive_key(&self, index: u32) -> Result<Self> {

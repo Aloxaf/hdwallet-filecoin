@@ -3,7 +3,7 @@ use std::str::FromStr;
 use hdpath::{CustomHDPath, PathValue};
 use serde::Deserialize;
 
-use crate::{error::Result, PrivateKey};
+use crate::{error::Result, PrivateKey, Signature};
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct ExtendedPrivateKey {
@@ -47,8 +47,8 @@ impl ExtendedPrivateKey {
         self.key.public_key().address().to_string()
     }
 
-    pub fn sign(&self, msg: &[u8]) -> Result<Vec<u8>> {
-        self.key.sign(msg).map(|sig| sig.serialize())
+    pub fn sign(&self, msg: &[u8]) -> Result<Signature> {
+        self.key.sign(msg)
     }
 }
 

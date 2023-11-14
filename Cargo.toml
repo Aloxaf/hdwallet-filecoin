@@ -1,6 +1,6 @@
 [package]
 name = "hdwallet-filecoin"
-version = "0.2.2"
+version = "0.2.3"
 description = "HD Wallet for Filecoin, including key generation, derivation and signing"
 keywords = ["filecoin", "hdwallet", "wallet"]
 authors = ["Aloxaf <aloxafx@gmail.com>"]

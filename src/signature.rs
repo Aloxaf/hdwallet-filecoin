@@ -44,19 +44,30 @@ impl Signature {
 
     /// convert to bytes with sig type
     pub fn serialize(&self) -> Vec<u8> {
+        let mut v = vec![self.sig_type()];
+        v.extend_from_slice(&self.bytes());
+        v
+    }
+
+    /// convert to bytes
+    pub fn bytes(&self) -> Vec<u8> {
         match self {
             Self::Secp256k1(sig) => {
                 let (rid, b) = sig.serialize_compact();
-                let mut v = vec![1];
+                let mut v = vec![];
                 v.extend_from_slice(&b);
                 v.push(rid.to_i32() as u8);
                 v
             }
-            Self::Bls(sig) => {
-                let mut v = vec![2];
-                v.extend_from_slice(&sig.compress());
-                v
-            }
+            Self::Bls(sig) => sig.compress().to_vec(),
+        }
+    }
+
+    /// get signature type
+    pub fn sig_type(&self) -> u8 {
+        match self {
+            Self::Secp256k1(_) => 1,
+            Self::Bls(_) => 2,
         }
     }
 }
